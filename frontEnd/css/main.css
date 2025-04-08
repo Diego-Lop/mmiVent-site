@@ -1,0 +1,32 @@
+.bigD{
+    display: flex;
+    justify-content: space-around;
+
+}
+
+/* .bigD:nth-child(2){
+    transform: rotate(-25deg);
+}
+
+.bigD:nth-child(3){
+    transform: rotate(25deg);
+} */
+.monRectangleDegrade{
+    position: relative;
+    width: 155px;
+    height: 152px;
+    left: 26px;
+    top: 34px;
+    transform: rotate(-25deg);
+    background: linear-gradient(180deg, #FF92A1 0%, #FD8F7B 24.6%, #F5B872 52.1%, #FFEF9D 100%);
+}
+
+.pticarre{
+    width: auto;
+    height: auto;
+    padding: 5px;
+    background-color: blue;
+    position: absolute;
+    z-index: 2;
+    color: wheat;
+}

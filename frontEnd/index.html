@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr" ng-app="monApp">
+<head>
+  <meta charset="UTF-8">
+  <title>MmiVent</title>
+  <script src="node_modules/angular/angular.min.js"></script>
+  <script src="app.js"></script>
+  <script src="services/authService.js"></script>
+  <script src="services/formService.js"></script>
+  <script src="services/commentService.js"></script>
+  <script src="services/authInterceptor.js"></script>
+  <script src="controllers/mainController.js"></script>
+  <script src="controllers/formController.js"></script>
+  <script src="controllers/commentairesController.js"></script>
+  <script src="controllers/recupEventController.js"></script>
+  <script src="controllers/addEventController.js"></script>
+  <script src="controllers/inscriptionController.js"></script>
+  <script src="controllers/adminController.js"></script>
+  <script src="controllers/dashboardController.js"></script>
+  <script src="filtres/securityFilters.js"></script>
+
+
+
+
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body ng-controller="MainController" id="monBody">
+
+  <header>
+    <nav>
+      <a href="index.html"><img src="assets/images/logoMmiVent1.svg" alt="logo mmiVents"></a>
+    
+      <div ng-if="!user"> 
+        <button id="inscription" onclick="openPopup('popupInscription')">M'inscrire</button>
+        <button id="connexion" onclick="openPopup('popupConnexion')">Connexion</button>
+      </div>
+        
+
+      <div ng-if="user" class="userConnecte" >
+        {{ user.email  }}
+      </div>
+      <div ng-if="hasRole('ROLE_USER') && !hasRole('ROLE_SUPER_USER')  && !hasRole('ROLE_ADMIN') ">
+          <button><a href="/dashboard.html">Profil</a></button>
+          <button ng-click="logout()">Déconnexion</button>
+      </div>
+      <div ng-if="hasRole('ROLE_SUPER_USER') || hasRole('ROLE_ADMIN')">
+          <button><a href="/dashboard.html">Dashboard</a></button>
+          <button ng-click="logout()">Déconnexion</button>
+      </div>
+    </nav>
+    
+  </header>
+
+
+      <!-- POPUP INSCRIPTION -->
+    <div class="popup" id="popupInscription" ng-controller="FormController">
+      <div class="popup-content">
+        <!-- Icône de fermeture -->
+        <span class="close-btn" onclick="closePopup('popupInscription')">&times;</span>
+
+        <form ng-submit="submitForm()">
+          <p>Inscription</p>
+          <input ng-model="user.email" placeholder="Email" required>
+          <input ng-model="user.password" placeholder="Mot de passe" required>
+          <button type="submit">S'inscrire</button>
+        </form>
+
+        <div ng-if="reponseServeur">
+          {{ reponseServeur.message  }}
+        </div>
+      </div>
+    </div>
+
+    <!-- POPUP CONNEXION -->
+  <div class="popup" id="popupConnexion">
+      <div class="popup-content">
+        <!-- Icône de fermeture -->
+        <span class="close-btn" onclick="closePopup('popupConnexion')">&times;</span>
+
+        <form ng-submit="login()">
+          <p>Connexion</p>
+          <input type="email" ng-model="userform.email" placeholder="Email" required>
+          <input type="password" ng-model="userform.password" placeholder="Mot de passe" required>
+          <button type="submit">Connexion</button>
+        </form>
+
+        <div ng-if="reponseServeur">
+          {{ reponseServeur.message  }}
+          <div ng-if="user">
+            Connecté en tant que : {{ user.email  }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+  <section class="container" id="cont1" >
+    <div id="textesAccueil">
+      <h1 class="responsiveText">Rejoignez les Événements MMI qui vous Inspirent !</h1>
+      <div id="boutonAccueil">
+            <button><a href="#cont2"> Découvrir des événnements</a></button>
+      </div>
+    </div>
+    <div class="contCategories" ng-controller="RecupEventController">
+      <a href="#cont2"><div class="categorie"  id="cat1"> 
+        <div class="image"><img src="assets/images/audiovisuel1.jpg" alt="image d'une camera "></div>
+        <p class="titreCategorie" id="filter" ng-model="query">Audiovisuel</p>
+      </div></a>
+      <a href="#cont2""><div class="categorie" id="cat2">
+        <div class="image"><img src="assets/images/devWeb1.jpg" alt="image d'un écran avec du code "></div>
+        <p class="titreCategorie">Developpement web</p>
+      </div></a>
+      <a href="#cont2""><div class="categorie" id="cat3">
+        <div class="image"><img src="assets/images/designUx1.jpg" alt="image d'un telephone "></div>
+        <p class="titreCategorie">Design UX</p>
+      </div></a>
+    </div>
+    
+
+  </section>
+  
+  <!-- ---------------------------------- Section evennements ---------------------------------- -->
+  <section class="container" id="cont2" ng-controller="RecupEventController">
+
+
+
+    <!-- -------------------------------------- Bouton ajouter un evennement -------------------------------------- -->
+    <h2 class="responsiveText">Evennements !</h2>
+    <button id="boutonAddEvent" onclick="openPopup('popupAddEvent')" ng-if="hasRole('ROLE_SUPER_USER') || hasRole('ROLE_ADMIN') ">Ajouter un événement</button>
+    <div class="barreFiltres">
+      <button ng-click="filtreCategorie = ''">Tous</button>
+      <button ng-click="filtreCategorie = 'Audiovisuel'">Audiovisuel</button>
+      <button ng-click="filtreCategorie = 'UX'">Design UX</button>
+      <button ng-click="filtreCategorie = 'Dev'">Développement</button>
+      <button ng-click="filtreCategorie = 'Communication'">Communication</button>
+      <button ng-click="filtreCategorie = 'IA'">IA</button>
+    </div>
+    
+      
+      <div class="contCarrousel" >
+        <div class="cardCarroussel" 
+        ng-repeat="event in events | filter:{categories: filtreCategorie}" 
+        ng-click="ouvrirPopupEvenement(event.id)">
+          <div class="imageCard">
+            <img ng-src="https://event.lea.therasse.mmi-velizy.fr/mmievent3/public/uploads/{{ event.photo  }}" alt="image d un evenement">
+          </div>
+          <div class="textCard">
+            <h3 class="titreCard">{{ event.nom  }}</h3>
+            <p>{{ event.date }}</p>
+            <p>{{ event.lieux }}</p>
+            <p><a href="#">En savoir plus</a></p>
+          </div>
+        </div>
+      
+        <!-- POPUP ÉVÉNEMENT -->
+        <div id="popupEvenement" class="popup-evenement" ng-if="evenementAffiche">
+          <div class="popup-evenement-content">
+            <span class="close-evenement" ng-click="fermerPopupEvenement()">&times;</span>
+              <div>
+                <div>
+                  <h3>{{ evenementAffiche.nom }}</h3>
+                  <p><strong>Date :</strong> {{ evenementAffiche.date  }}</p>
+                  <p><strong>Lieux :</strong> {{ evenementAffiche.lieux }}</p>
+                  <p><strong>Description :</strong> {{ evenementAffiche.description }}</p>
+                  <p><strong>Places :</strong> {{ evenementAffiche.nombreDePlaces == 9999 ? 'illimitées' : evenementAffiche.nombreDePlaces }}</p>
+                  <p><strong>Prix :</strong> {{ evenementAffiche.prix == 0 ? 'Gratuit' : evenementAffiche.prix + ' €' }}</p>
+                  <p><strong>Organisme :</strong> {{ evenementAffiche.nomOrganisme }}</p>
+                  <p><strong>Catégorie :</strong> {{ evenementAffiche.categories  }}</p>
+                </div>
+                
+                  <div class="carousel-commentairesInPopup" id="carouselCommentairesInPopup" ng-controller="CommentairesController">
+                    <h3>Commentaires </h3>
+                    <p ng-if="(commentaireRecup | filter:{evenement:{id: evenementAffiche.id}}).length === 0" class="aucun-commentaire">
+                      Aucun commentaire pour cet événement... sois le premier à réagir ! 🎤
+                    </p>
+                    <div class="carte-commentaireInPopup" ng-repeat="commentaire in commentaireRecup | filter:{evenement: {id: evenementAffiche.id}}"
+                        ng-click="openPopupCommentaire(commentaire.contenu, commentaire.id, commentaire.evenement.nom, commentaire.date)">
+                      <img src="assets/images/profil.png" class="imgCommentInPopup" alt="profil">
+                      <p><strong>{{ commentaire.user }}</strong></p>
+                      <p class="texte-apercuInPopup">{{ commentaire.contenu | limitTo: 80 }}</p>
+                    </div>
+                    <!-- POPUP -->
+                    <div id="popupCommentaire" class="popup-commentaire">
+                      <div class="contenu-popup-commentaire">
+                        <span class="fermer-commentaire" ng-click="closePopupCommentaire()">&times;</span>
+                        <h4>Événement : {{ commentaireNomEvent }}</h4>
+                        <p>{{ commentaireCont }}</p>
+                        <p>{{ commentaireDate | limitTo: 10 }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              <div>
+                <div>
+                  <img ng-src="https://event.lea.therasse.mmi-velizy.fr/mmievent3/public/uploads/{{ evenementAffiche.photo  }}" class="imgEventInPopup" alt="Image de l'événement">
+                </div>
+
+                <div>
+                  <form ng-controller="InscriptionController" ng-submit="inscriptionEvenement(evenementAffiche.id)">
+                    <h4>Inscription à l'événement</h4>
+                    <input type="text" ng-model="newInscription.nom" placeholder="Nom" required>
+                    <input type="text" ng-model="newInscription.prenom" placeholder="Prénom" required>
+                    <button type="submit">M’inscrire</button>
+                  </form>
+                  <!-- FORMULAIRE ajout commentaire-->
+                  <h4>Ajouter un commentaire</h4>
+                  <form ng-submit="ajouterCommentaire(evenementAffiche.id)" ng-controller="CommentairesController">
+                    <input type="text" ng-model="newComment.description" placeholder="Donne ton avis sur l'événnement 🤗" name="commentaire" id="commentaire">
+                    <button type="submit">Ajouter</button>
+                  </form>
+                </div>
+              </div>
+            
+          </div>
+        </div>
+      </div>
+      
+      
+
+      <div class="popup" id="popupAddEvent" ng-controller="AddEventController">
+        <div class="popup-content large">
+          <span class="close-btn" onclick="closePopup('popupAddEvent')">&times;</span>
+          <form ng-submit="ajouterEvenement()">
+            <input type="text" ng-model="newEvent.nom" placeholder="Nom de l'événement" required>
+            <textarea ng-model="newEvent.description" placeholder="Description" required></textarea>
+            <input type="number" ng-model="newEvent.nombreDePlaces" placeholder="Nombre de places || Rien si pas de limité" min="0" max="9999" >
+            <input type="datetime-local" ng-model="newEvent.date" required>
+            <input type="text" ng-model="newEvent.lieux" placeholder="Lieux" required>
+            <input type="file" accept="image/*" onchange="angular.element(this).scope().newEvent.photo = this.files[0]" required>
+            <p ng-if="newEvent.photo">Taille : {{ (newEvent.photo.size / 1024 / 1024).toFixed(2) }} Mo</p>
+            <input type="number" ng-model="newEvent.prix" placeholder="Prix en € || Rien si c'est gratuit" min="0" max="1000">
+            <input type="text" ng-model="newEvent.nomOrganisme" placeholder="Nom de l'organisme" required>
+            <select ng-model="newEvent.categories" required>
+              <option value="" disabled selected>Choisis une catégorie</option>
+              <option value="Audiovisuel">Audiovisuel</option>
+              <option value="UX">Design UX</option>
+              <option value="Dev">Développement</option>
+              <option value="Communication">Communication</option>
+              <option value="IA">IA</option>
+            </select>
+            <button type="submit">Ajouter l'événement</button>
+          </form>
+        </div>
+      </div>
+      
+  </section>
+  
+
+
+  <!-- ---------------------------------- Section Communauté ---------------------------------- -->
+  <section class="container" id="cont3">
+    <h2 class="responsiveText">Communauté !</h2>
+  
+    <section class="commentaires-section" ng-controller="CommentairesController">
+      <div class="carousel-commentaires" id="carouselCommentaires">
+        <div class="carte-commentaire" ng-repeat="commentaire in commentaireRecup"
+             ng-click="openPopupCommentaire(commentaire.contenu, commentaire.id, commentaire.evenement.nom, commentaire.date)">
+          <div class="imgNomComment">
+          <img src="assets/images/profil.png" alt="profil">
+          <p><strong>{{ commentaire.user }}</strong></p>
+          </div>
+          <p class="texte-apercu">{{ apercuCommentaire(commentaire) }}</p>
+        </div>
+      </div>
+  
+      <!-- POPUP -->
+      <div id="popupCommentaire" class="popup-commentaire">
+        <div class="contenu-popup-commentaire">
+          <span class="fermer-commentaire" ng-click="closePopupCommentaire()">&times;</span>
+          <h4>Événement : {{ commentaireNomEvent }}</h4>
+          <p>{{ commentaireCont }}</p>
+          <p>{{ commentaireDate | limitTo: 10 }}</p>
+        </div>
+      </div>
+    </section>
+  </section>
+  
+
+  <footer>
+    <div id="partieGauche">
+      <h3>Contactez nous</h3>
+      <div id="mailFooter">
+        <img src="assets/images/mail.png" alt="icone mail">
+        <p>MMIVent@event.com</p>
+      </div>
+    </div>
+    <div class="reseaux">
+      <img src="assets/images/instagram.png" alt="logo INSTAGRAM" class="logoFooter">
+      <img src="assets/images/facebook.png" alt="logo facebook" class="logoFooter">
+      <img src="assets/images/discord.png" alt="logo DISCORD" class="logoFooter">
+
+
+    </div>
+
+
+  </footer>
+  <script>
+    const carousel = document.getElementById('carouselCommentaires');
+  
+    let isDragging = false;
+    let startX;
+    let scrollStart;
+  
+    carousel.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.pageX - carousel.offsetLeft;
+      scrollStart = carousel.scrollLeft;
+      carousel.style.cursor = 'grabbing';
+      e.preventDefault(); 
+    });
+  
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+      carousel.style.cursor = 'grab';
+    });
+  
+    carousel.addEventListener('mouseleave', () => {
+      isDragging = false;
+      carousel.style.cursor = 'grab';
+    });
+  
+    carousel.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const x = e.pageX - carousel.offsetLeft;
+      const distance = x - startX;
+      carousel.scrollLeft = scrollStart - distance;
+    });
+  </script>
+  
+  
+  <script src="controllers/bouttonController.js"></script>
+  <!-- <script src="controllers/carouselController.js"></script> -->
+
+  
+
+</body>
+</html>

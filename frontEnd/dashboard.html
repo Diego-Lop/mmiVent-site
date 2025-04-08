@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr" ng-app="monApp">
+<head>
+  <meta charset="UTF-8">
+  <title>MmiVent</title>
+  <script src="node_modules/angular/angular.min.js"></script>
+  <script src="app.js"></script>
+  <script src="services/authService.js"></script>
+  <script src="services/formService.js"></script>
+  <script src="services/commentService.js"></script>
+  <script src="services/authInterceptor.js"></script>
+  <script src="controllers/mainController.js"></script>
+  <script src="controllers/formController.js"></script>
+  <script src="controllers/commentairesController.js"></script>
+  <script src="controllers/recupEventController.js"></script>
+  <script src="controllers/addEventController.js"></script>
+  <script src="controllers/inscriptionController.js"></script>
+  <script src="controllers/adminController.js"></script>
+  <script src="controllers/dashboardController.js"></script>
+  <!-- <script src="filtres/securityFilters.js"></script> -->
+
+
+
+
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body ng-controller="MainController" id="monBody">
+
+  <header>
+    <nav>
+      <a href="index.html"><img src="assets/images/logoMmiVent1.svg" alt="logo mmiVents"></a>
+    
+      <div ng-if="!user"> 
+        {{  }}
+      </div>
+        <!-- <a href="/dashboard.html">Dashboard</a> -->
+
+      <div ng-if="user" class="userConnecte" >
+        {{ user.email  }}
+      </div>
+      <button ng-if="user" ng-click="logout()">Déconnexion</button>
+    </nav>
+    
+  </header>
+
+
+      <!-- POPUP INSCRIPTION -->
+    <div class="popup" id="popupInscription" ng-controller="FormController">
+      <div class="popup-content">
+        <!-- Icône de fermeture -->
+        <span class="close-btn" onclick="closePopup('popupInscription')">&times;</span>
+
+        <form ng-submit="submitForm()">
+          <p>Inscription</p>
+          <input ng-model="user.email" placeholder="Email" required>
+          <input ng-model="user.password" placeholder="Mot de passe" required>
+          <button type="submit">S'inscrire</button>
+        </form>
+
+        <div ng-if="reponseServeur">
+          {{ reponseServeur.message  }}
+        </div>
+      </div>
+    </div>
+
+    <!-- POPUP CONNEXION -->
+  <div class="popup" id="popupConnexion">
+      <div class="popup-content">
+        <!-- Icône de fermeture -->
+        <span class="close-btn" onclick="closePopup('popupConnexion')">&times;</span>
+
+        <form ng-submit="login()">
+          <p>Connexion</p>
+          <input type="email" ng-model="userform.email" placeholder="Email" required>
+          <input type="password" ng-model="userform.password" placeholder="Mot de passe" required>
+          <button type="submit">Connexion</button>
+        </form>
+
+        <div ng-if="reponseServeur">
+          {{ reponseServeur.message  }}
+          <div ng-if="user">
+            Connecté en tant que : {{ user.email  }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+   <div class="dashboard-section" ng-controller="AdminController" ng-if="hasRole('ROLE_ADMIN')">
+    <h1 class="titreDashboard" ng-if="hasRole('ROLE_ADMIN')" >dashboard admin </h1>
+    <h3>📅 Événements</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Date</th>
+          <th>Places</th>
+          <th>Lieu</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="event in evenements">
+          <td>{{ event.id  }}</td>
+          <td>{{ event.nom  }}</td>
+          <td>{{ event.date }}</td>
+          <td>{{ event.nombreDePlaces }}</td>
+          <td>{{ event.lieux }}</td>
+          <td>
+            <button ng-click="supprimerEvenement(event.id)">🗑 Supprimer</button>
+            <button ng-click="modifierEvenement(event.id)">🔨 Modifier</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="popup" id="popupEditEvent" >
+      <div class="popup-content large">
+        <span class="close-btn" ng-click="fermerPopupEdit()">&times;</span>
+        <form ng-submit="modifierEvenements(eventToEdit.id)">
+          <input type="text" ng-model="eventToEdit.nom" placeholder="Nouveau nom de l'événement" required>
+          <textarea ng-model="eventToEdit.description" placeholder="Nouvelle description" required></textarea>
+          <input type="number" ng-model="eventToEdit.nombreDePlaces" placeholder="Nouveau nombre de places" min="0" max="3000">
+          <!-- <input type="datetime-local" ng-model="eventToEdit.date" required> -->
+          <input type="text" ng-model="eventToEdit.lieux" placeholder="Nouveau lieux" required>
+          <input type="file" accept="image/*" onchange="angular.element(this).scope().eventToEdit.photo = this.files[0]">
+          <input type="number" ng-model="eventToEdit.prix" placeholder="Nouveau prix en €" min="0" max="100">
+          <input type="text" ng-model="eventToEdit.nomOrganisme" placeholder="Nouveau nom de l'organisme" required>
+          <select ng-model="eventToEdit.categories" required>
+            <option value="" disabled>Choisis une catégorie</option>
+            <option value="Audiovisuel">Audiovisuel</option>
+            <option value="UX">Design UX</option>
+            <option value="Dev">Développement</option>
+            <option value="Communication">Communication</option>
+            <option value="IA">IA</option>
+          </select>
+          <button type="submit">Modifier l'événement</button>
+        </form>
+      </div>
+    </div>
+    
+
+    <h3>👥 Utilisateurs</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Rôles</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="user in utilisateurs">
+          <td>{{ user.id  }}</td>
+          <td>{{ user.email  }}</td>
+          <td>{{ user.roles.join(', ') }}</td>
+          <td>
+            <button ng-click="toggleActivation(user.id)">🔁 Activer/Désactiver</button>
+            <button ng-click="supprimerUtilisateur(user.id)">🗑 Supprimer</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  
+  </div>
+  
+  <div class="dashboard-section" ng-controller="DashboardController" ng-if="hasRole('ROLE_SUPER_USER')">
+    <h1 class="titreDashboard" ng-if="hasRole('ROLE_SUPER_USER')" >dashboard superuser </h1>
+    <h3>📅 Mes événements </h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Date</th>
+          <th>Places</th>
+          <th>Lieu</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="event in evenements">
+          <td>{{ event.id  }}</td>
+          <td>{{ event.nom  }}</td>
+          <td>{{ event.date }}</td>
+          <td>{{ event.nombreDePlaces }}</td>
+          <td>{{ event.lieux }}</td>
+          <td>
+            <button ng-click="supprimerEvenement(event.id)">🗑 Supprimer</button>
+            <button ng-click="modifierEvenement(event.id)">🔨 Modifier</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="popup" id="popupEditEvent" >
+      <div class="popup-content large">
+        <span class="close-btn" ng-click="fermerPopupEdit()">&times;</span>
+        <form ng-submit="modifierEvenements(eventToEdit.id)">
+          <input type="text" ng-model="eventToEdit.nom" placeholder="Nouveau nom de l'événement" required>
+          <textarea ng-model="eventToEdit.description" placeholder="Nouvelle description" required></textarea>
+          <input type="number" ng-model="eventToEdit.nombreDePlaces" placeholder="Nouveau nombre de places" min="0" max="3000">
+          <!-- <input type="datetime-local" ng-model="eventToEdit.date" required> -->
+          <input type="text" ng-model="eventToEdit.lieux" placeholder="Nouveau lieux" required>
+          <input type="file" accept="image/*" onchange="angular.element(this).scope().eventToEdit.photo = this.files[0]">
+          <input type="number" ng-model="eventToEdit.prix" placeholder="Nouveau prix en €" min="0" max="100">
+          <input type="text" ng-model="eventToEdit.nomOrganisme" placeholder="Nouveau nom de l'organisme" required>
+          <select ng-model="eventToEdit.categories" required>
+            <option value="" disabled>Choisis une catégorie</option>
+            <option value="Audiovisuel">Audiovisuel</option>
+            <option value="UX">Design UX</option>
+            <option value="Dev">Développement</option>
+            <option value="Communication">Communication</option>
+            <option value="IA">IA</option>
+          </select>
+          <button type="submit">Modifier l'événement</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+  
+  <div class="dashboard-section" ng-controller="DashboardController" ng-if="hasRole('ROLE_USER')  && !hasRole('ROLE_ADMIN')">
+    <h1 class="titreDashboard" ng-if="hasRole('ROLE_USER')" >profil user </h1>
+    <h3>📅 Mes inscriptions aux événements </h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Date</th>
+          <th>Lieu</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="event in evenementsInscrits">
+          <td>{{ event.id  }}</td>
+          <td>{{ event.nom  }}</td>
+          <td>{{ event.date }}</td>
+          <td>{{ event.lieux }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+  
+
+  <footer>
+    <div id="partieGauche">
+      <h3>Contactez nous</h3>
+      <div id="mailFooter">
+        <img src="assets/images/mail.png" alt="icone mail">
+        <p>MMIVent@event.com</p>
+      </div>
+    </div>
+    <div class="reseaux">
+      <img src="assets/images/instagram.png" alt="logo INSTAGRAM" class="logoFooter">
+      <img src="assets/images/facebook.png" alt="logo facebook" class="logoFooter">
+      <img src="assets/images/discord.png" alt="logo DISCORD" class="logoFooter">
+
+
+    </div>
+
+
+  </footer>
+  
+</body>
+</html>
